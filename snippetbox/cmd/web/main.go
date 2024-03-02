@@ -10,6 +10,10 @@ func main() {
 
 	router := http.NewServeMux()
 
+	fileServer := http.FileServer(http.Dir("C:\\Users\\gowda\\Desktop\\GO-project\\Lets-go-tutorial\\snippetbox\\ui\\static\\"))
+
+	router.Handle("/static/", http.StripPrefix("/static", fileServer))
+
 	router.HandleFunc("/", home)
 	router.HandleFunc("/snippet/view", snippetview)
 	router.HandleFunc("/snippet/create", snippetcreate)

@@ -14,14 +14,19 @@ func home(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	ts, err := template.ParseFiles("C:\\Users\\gowda\\Desktop\\GO-project\\Lets-go-tutorial\\snippetbox\\ui\\html\\pages\\home.tmpl")
+	files := []string{
+		"C:\\Users\\gowda\\Desktop\\GO-project\\Lets-go-tutorial\\snippetbox\\ui\\html\\pages\\base.html",
+		"C:\\Users\\gowda\\Desktop\\GO-project\\Lets-go-tutorial\\snippetbox\\ui\\html\\pages\\home.html",
+		"C:\\Users\\gowda\\Desktop\\GO-project\\Lets-go-tutorial\\snippetbox\\ui\\html\\partials\\nav.html",
+	}
+	ts, err := template.ParseFiles(files...)
 	if err != nil {
 		log.Fatal("internal server error :", err)
 		return
 	}
-	err=ts.Execute(w, nil)
-	if err!=nil{
-		http.Error(w,fmt.Sprint("internalserver error: ",err),http.StatusBadGateway)
+	err = ts.ExecuteTemplate(w, "base", nil)
+	if err != nil {
+		http.Error(w, fmt.Sprint("internalserver error: ", err), http.StatusBadGateway)
 	}
 	w.Write([]byte("hello hi this is a snippet box"))
 }
