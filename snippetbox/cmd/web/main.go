@@ -1,26 +1,40 @@
 package main
 
 import (
-	"fmt"
+	"flag"
 	"log"
 	"net/http"
+	"os"
 )
+type application struct{
+	errlog *log.Logger
+	infolog *log.Logger
+
+}
 
 func main() {
+	addr := flag.String("addr", ":4000", "http network")
+	flag.Parse()
+	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
+	errlog := log.New(os.Stderr, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
+	
 
-	router := http.NewServeMux()
+	app:=&application{
+		errlog:errlog,
+		infolog:infoLog,
+	}
+	
+	
+	infoLog.Println("server running on ", *addr)
 
-	fileServer := http.FileServer(http.Dir("C:\\Users\\gowda\\Desktop\\GO-project\\Lets-go-tutorial\\snippetbox\\ui\\static\\"))
-
-	router.Handle("/static/", http.StripPrefix("/static", fileServer))
-
-	router.HandleFunc("/", home)
-	router.HandleFunc("/snippet/view", snippetview)
-	router.HandleFunc("/snippet/create", snippetcreate)
-	fmt.Print("server running on 4000")
-	err := http.ListenAndServe(":4000", router)
+	srv := &http.Server{
+		Addr:     *addr,
+		ErrorLog: errlog,
+		Handler:  app.routes(),
+	}
+	err := srv.ListenAndServe()
 	if err != nil {
-		log.Fatal("error running the server")
+		errlog.Println("error running the server ", err)
 
 	}
 
