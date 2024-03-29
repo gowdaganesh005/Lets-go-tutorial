@@ -2,10 +2,11 @@ package models
 
 import (
 	"database/sql"
+	"errors"
 	"time"
 )
 
-type snippets struct {
+type Snippets struct {
 	ID      int
 	Title   string
 	Content string
@@ -17,9 +18,19 @@ type SnippetModel struct {
 	DB *sql.DB
 }
 
-func (m *SnippetModel) Get(id int) (*snippets, error) {
-
-	return nil, nil
+func (m *SnippetModel) Get(id int) (*Snippets, error) {
+	stmt := "SELECT * from snippets where expires > UTC_TIMESTAMP() AND id=?"
+	row := m.DB.QueryRow(stmt, id)
+	s := &Snippets{}
+	err := row.Scan(&s.ID, &s.Title, &s.Content, &s.Created, &s.Expires)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNoRecord
+		} else {
+			return nil, err
+		}
+	}
+	return s, nil
 
 }
 func (m *SnippetModel) Insert(title string, content string, expires int) (int, error) {
@@ -35,6 +46,25 @@ func (m *SnippetModel) Insert(title string, content string, expires int) (int, e
 	}
 	return int(id), nil
 }
-func (m *SnippetModel) Latest() ([]*snippets, error) {
-	return nil, nil
+func (m *SnippetModel) Latest() ([]*Snippets, error) {
+	stmt := " SELECT * FROM snippets WHERE  expires  >UTC_TIMESTAMP() ORDER BY id DESC LIMIT 10"
+	rows, err := m.DB.Query(stmt)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	snippet := []*Snippets{}
+	for rows.Next() {
+		s := &Snippets{}
+		err = rows.Scan(&s.ID, &s.Title, &s.Content, &s.Created, &s.Expires)
+		if err != nil {
+			return nil, err
+		}
+		snippet = append(snippet, s)
+
+	}
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	return snippet, nil
 }

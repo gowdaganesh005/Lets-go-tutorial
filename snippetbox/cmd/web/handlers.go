@@ -1,12 +1,13 @@
 package main
 
 import (
+	"errors"
 	"fmt"
-
-	"html/template"
 
 	"net/http"
 	"strconv"
+
+	"github.com/gowdaganesh005/snippetbox/internals/models"
 )
 
 func (app application) home(w http.ResponseWriter, r *http.Request) {
@@ -14,26 +15,16 @@ func (app application) home(w http.ResponseWriter, r *http.Request) {
 		app.notfound(w)
 		return
 	}
-	files := []string{
-		"C:\\Users\\gowda\\Desktop\\GO-project\\Lets-go-tutorial\\snippetbox\\ui\\html\\pages\\base.html",
-		"C:\\Users\\gowda\\Desktop\\GO-project\\Lets-go-tutorial\\snippetbox\\ui\\html\\pages\\home.html",
-		"C:\\Users\\gowda\\Desktop\\GO-project\\Lets-go-tutorial\\snippetbox\\ui\\html\\partials\\nav.html",
-	}
-	ts, err := template.ParseFiles(files...)
-	if err != nil {
-
-		app.serverError(w, err)
-		return
-	}
-	err = ts.ExecuteTemplate(w, "base", nil)
+	
+	snippets, err := app.snippets.Latest()
 	if err != nil {
 		app.serverError(w, err)
 		return
 	}
-	w.Write([]byte("hello hi this is a snippet box"))
+	data := app.newTemplateData(r)
+	data.Snippets = snippets
+	app.render(w, http.StatusOK, "home.html", data)
 }
-
-
 
 func (app application) snippetcreate(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -41,18 +32,17 @@ func (app application) snippetcreate(w http.ResponseWriter, r *http.Request) {
 		app.clientError(w, http.StatusMethodNotAllowed)
 		return
 	}
-	title:="0 snail"
-   	content:="0 snail\nClimb mount fuji,\nBut slowly\nBut slowly,slowly!\n \n -Kobayassi Issa"
-  	expires:=7
-	id,err:=app.snippets.Insert(title,content,expires)
-	if err!=nil {
-		app.serverError(w,err)
+	title := "0 snail"
+	content := "0 snail\nClimb mount fuji,\nBut slowly\nBut slowly,slowly!\n \n -Kobayassi Issa"
+	expires := 7
+	id, err := app.snippets.Insert(title, content, expires)
+	if err != nil {
+		app.serverError(w, err)
 		return
 
-
 	}
-	http.Redirect(w,r,fmt.Sprintf("/snippet/view?id=%d",id),http.StatusSeeOther)
-	
+	http.Redirect(w, r, fmt.Sprintf("/snippet/view?id=%d", id), http.StatusSeeOther)
+
 	w.Write([]byte("create the snippet"))
 }
 func (app application) snippetview(w http.ResponseWriter, r *http.Request) {
@@ -63,5 +53,20 @@ func (app application) snippetview(w http.ResponseWriter, r *http.Request) {
 		return
 
 	}
-	fmt.Fprint(w, "snippet view for id ", id)
+
+	snippet, err := app.snippets.Get(id)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			app.notfound(w)
+		} else {
+			app.serverError(w, err)
+
+		}
+		return
+	}
+	data := app.newTemplateData(r)
+	data.Snippet = snippet
+
+	app.render(w, http.StatusOK, "view.html", data)
+
 }
